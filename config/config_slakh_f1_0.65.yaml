@@ -1,7 +1,7 @@
 num_epochs: 800
-devices: 1
+devices: 1  # Use one device (GPU)
 mode: "train"
-model_type: ${hydra:runtime.choices.model} # parse the filename of the config
+model_type: ${hydra:runtime.choices.model}
 dataset_type: ${hydra:runtime.choices.dataset}
 seed: 365
 path:
@@ -18,7 +18,7 @@ optim:
   lr: 2e-4
   warmup_steps: 64500
   num_epochs: ${num_epochs}
-  num_steps_per_epoch: 1289   # TODO: this is not good practice. Ideally we can get this from dataloader.
+  num_steps_per_epoch: 1289
   min_lr: 1e-4
 
 grad_accum: 1
@@ -48,9 +48,8 @@ trainer:
   num_sanity_val_steps: 2
   log_every_n_steps: 100
   strategy: "ddp_find_unused_parameters_false"
-  devices: ${devices}
+  devices: ${devices}  # Correctly set the devices parameter
   check_val_every_n_epoch: 1
-  # deterministic: True
 
 eval:
   is_sanity_check: False
@@ -63,9 +62,8 @@ eval:
   midi_dir:
   contiguous_inference:
   batch_size: 8
-  use_tf_spectral_ops: False    # change this to True if using pretrained/mt3.pth
+  use_tf_spectral_ops: False
 
 defaults:
   - model: MT3Net
   - dataset: Slakh
-  # TODO: we need to specify num_samples_per_batch here from 8 to 12
