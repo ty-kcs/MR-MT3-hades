@@ -37,6 +37,7 @@ def main(cfg):
     tqdm_callback = TQDMProgressBar(refresh_rate=1)
 
     trainer = pl.Trainer(
+        devices=[0],
         logger=logger,
         callbacks=[lr_monitor, checkpoint_callback, tqdm_callback],
         **cfg.trainer
