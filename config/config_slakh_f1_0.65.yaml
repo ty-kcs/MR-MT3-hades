@@ -65,5 +65,7 @@ eval:
   use_tf_spectral_ops: False
 
 defaults:
+  - _self_
   - model: MT3Net
   - dataset: Slakh
+

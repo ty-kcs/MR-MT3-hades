@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 import hydra
 from tasks.mt3_net import MT3Net
 
-@hydra.main(config_path="config", config_name="config")
+@hydra.main(config_path="config", config_name="config", version_base = None)
 def main(cfg):
     # set seed to ensure reproducibility
     pl.seed_everything(cfg.seed)
