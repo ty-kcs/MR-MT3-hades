@@ -14,7 +14,8 @@ pytorch-lightning
 note_seq
 seqio==0.0.19
 tensorflow-metadata==1.13.0
-tensorflowjs==3.18.0
+tensorflowjs>=4.0.0
 tflite-support==0.4.4
+
 
 
