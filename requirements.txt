@@ -11,5 +11,4 @@ pretty-midi==0.2.9
 einops==0.4.1
 hydra-core==1.2.0
 pytorch-lightning
-ddsp
 note_seq
