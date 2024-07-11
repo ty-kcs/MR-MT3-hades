@@ -11,7 +11,6 @@ pretty-midi==0.2.9
 einops==0.4.1
 hydra-core==1.2.0
 pytorch-lightning
-ddsp==3.6.0
 note_seq
 seqio==0.0.19
 tensorflow-metadata==1.13.0
