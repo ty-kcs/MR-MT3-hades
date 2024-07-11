@@ -1,5 +1,4 @@
 numpy==1.23.5
-protobuf>=3.9.2,<3.20
 typing_extensions
 torch
 tensorflow==2.15.0
@@ -18,3 +17,4 @@ seqio==0.0.19
 tensorflow-metadata==1.13.0
 tensorflowjs==3.18.0
 tflite-support==0.4.4
+
