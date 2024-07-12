@@ -1,6 +1,14 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# 以下の行を追加したよ
+import sys
+sys.path.append('/content/MR-MT3-GoogleColab')
+sys.path.append('/content/MR-MT3-GoogleColab/dataset')
+
+from dataset.dataset_2_random import SlakhDataset
+#追加したよ
+
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.callbacks import TQDMProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger
