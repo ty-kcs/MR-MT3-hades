@@ -1,12 +1,18 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # 以下の行を追加したよ
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys
-sys.path.append('/content/MR-MT3-GoogleColab')
-sys.path.append('/content/MR-MT3-GoogleColab/dataset')
+
+# PYTHONPATH の設定
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
 
 from dataset.dataset_2_random import SlakhDataset
+
+sys.path.append('/content/MR-MT3-GoogleColab')
+sys.path.append('/content/MR-MT3-GoogleColab/dataset')
 #追加したよ
 
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
