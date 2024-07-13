@@ -1,8 +1,8 @@
 numpy==1.23.5
 tensorflow==2.15.0
 tensorflow-text==2.15.0
-tensorflow-hub==0.16.1
-ddsp==3.6.0
+tensorflow-hub>=0.16.1
+ddsp<=3.6.0
 seqio==0.0.19
 t5==0.9.4
 absl-py==1.4.0
@@ -14,8 +14,9 @@ einops==0.4.1
 hydra-core==1.2.0
 pytorch-lightning
 note_seq
-protobuf==3.20.3
+protobuf>=3.20.3,<=3.20.4
 typing_extensions
+
 
 
 
