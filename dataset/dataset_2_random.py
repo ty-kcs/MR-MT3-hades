@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
+import yaml
 
 # NOTE: this needs to be here, or else there will be a weird hanging issue when using TF spectrogram in PyTorch DDP training
 # see this issue: https://github.com/tensorflow/tensorflow/issues/60109
@@ -48,7 +49,7 @@ class SlakhDataset(Dataset):
         self.vocab = vocabularies.vocabulary_from_codec(self.codec)
         self.audio_filename = audio_filename
         self.midi_folder = midi_folder
-        self.inst_filename = metadata_filename
+        self.metadata_filename = metadata_filename
         self.mel_length = mel_length
         self.event_length = event_length
         self.df = self._build_dataset(root_dir, shuffle=shuffle)
@@ -99,15 +100,24 @@ class SlakhDataset(Dataset):
         return frames, times
 
     def _parse_midi(self, path, metadata):
-        note_seqs = []
-        inst_names = []
+      note_seqs = []  # ノートシーケンスを保存するリスト
+      inst_names = []  # 楽器の名前を保存するリスト
 
-        for stem, info in metadata['stems'].items():
-            if info['midi_saved']:
-                midi_path = f'{path}/{stem}.mid'
-                note_seqs.append(note_seq.midi_file_to_note_sequence(midi_path))
-                inst_names.append(info['inst_class'])
-        return note_seqs, inst_names
+      for stem, info in metadata['stems'].items():  # メタデータの各エントリをループ処理
+          if info['midi_saved']:  # MIDIファイルが保存されているかをチェック
+              midi_path = f'{path}/{stem}.mid'  # MIDIファイルのパスを作成
+              try:
+                  # MIDIファイルをノートシーケンスに変換してリストに追加
+                  note_seqs.append(note_seq.midi_file_to_note_sequence(midi_path))
+                  # 楽器の名前をリストに追加
+                  inst_names.append(info['inst_class'])
+              except FileNotFoundError:
+                  # ファイルが見つからない場合の警告メッセージ
+                  print(f"Warning: MIDI file not found at {midi_path}")
+      
+      # ノートシーケンスと楽器名のリストを返す
+      return note_seqs, inst_names
+
 
     def _tokenize(self, tracks: List[note_seq.NoteSequence], samples: np.ndarray, inst_names: List[str], example_id: Optional[str] = None):
 
@@ -385,7 +395,7 @@ class SlakhDataset(Dataset):
         
         return ns, audio, inst_names
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         # メタデータを取得
         metadata = self.df[idx]['metadata']
     

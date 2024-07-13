@@ -4,7 +4,7 @@ train:
   mel_length: ${mel_length}
   event_length: ${event_length}
   midi_folder: MIDI
-  inst_filename: inst_names.json
+  metadata_filename: inst_names.json
   audio_filename: mix_16k.wav
   num_rows_per_batch: ${num_rows_per_batch}
   split_frame_length: ${split_frame_length}
