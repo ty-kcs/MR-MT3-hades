@@ -1,21 +1,21 @@
 numpy==1.23.5
-typing_extensions
-torch
 tensorflow==2.15.0
 tensorflow-text==2.15.0
-tensorflow-hub>=0.13.0
+tensorflow-hub==0.16.1
+ddsp==3.6.0
+seqio==0.0.19
+t5==0.9.4
+absl-py==1.4.0
+torch
 transformers==4.18.0
 librosa==0.9.1
-t5==0.9.3
 pretty-midi==0.2.9
 einops==0.4.1
 hydra-core==1.2.0
 pytorch-lightning
 note_seq
-seqio==0.0.19
-tensorflow-metadata==1.13.0
-tensorflowjs>=4.0.0
-tflite-support==0.4.4
+protobuf==3.20.3
+typing_extensions
 
 
 
