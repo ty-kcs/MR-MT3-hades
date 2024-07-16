@@ -1,0 +1,4 @@
+- devices=[0,1]
+- model=MT3Net
+- dataset=Slakh
+- split_frame_length=2000

@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-import yaml
+import os
 
 # NOTE: this needs to be here, or else there will be a weird hanging issue when using TF spectrogram in PyTorch DDP training
 # see this issue: https://github.com/tensorflow/tensorflow/issues/60109
@@ -33,7 +33,7 @@ class SlakhDataset(Dataset):
         onsets_only=False, 
         audio_filename='mix.flac', 
         midi_folder='MIDI', 
-        metadata_filename='metadata.yaml', #changed from inst_filename
+        inst_filename='inst_names.json',
         shuffle=True,
         num_rows_per_batch=8,
         split_frame_length=2000,
@@ -49,7 +49,7 @@ class SlakhDataset(Dataset):
         self.vocab = vocabularies.vocabulary_from_codec(self.codec)
         self.audio_filename = audio_filename
         self.midi_folder = midi_folder
-        self.metadata_filename = metadata_filename
+        self.inst_filename = inst_filename
         self.mel_length = mel_length
         self.event_length = event_length
         self.df = self._build_dataset(root_dir, shuffle=shuffle)
@@ -62,20 +62,30 @@ class SlakhDataset(Dataset):
         self.split_frame_length = split_frame_length
         self.is_deterministic = is_deterministic
         self.is_randomize_tokens = is_randomize_tokens
-    
-    #_build_datasetを更新
+
     def _build_dataset(self, root_dir, shuffle=True):
         df = []
-        audio_files = sorted(glob(f'{root_dir}/**/{self.audio_filename}'))
+        print(f"Searching in: {root_dir}")
+        audio_files = sorted(glob(f'{root_dir}/**/mix_16k.wav', recursive=True))
+        print(f"Found {len(audio_files)} audio files")
         print("root_dir", root_dir, len(audio_files), self.audio_filename)
         for a_f in audio_files:
-            metadata_path = a_f.replace(self.audio_filename, self.metadata_filename)
+            metadata_path = a_f.replace(self.audio_filename, 'metadata.yaml')  # ここでmetadata_pathを定義
+            if not os.path.exists(metadata_path):
+                print(f"Metadata file not found: {metadata_path}")
+                continue
+            inst_path = a_f.replace(self.audio_filename, self.inst_filename)
             midi_path = a_f.replace(self.audio_filename, self.midi_folder)
-            with open(metadata_path, 'r') as f:
-                metadata = yaml.safe_load(f)
-            df.append({'metadata': metadata, 'audio_path': a_f, 'midi_path': midi_path})
-        assert len(df) > 0
+            with open(inst_path) as f:
+                inst_names = json.load(f)
+            df.append({'inst_names': inst_names, 'audio_path': a_f, 'midi_path': midi_path})
+    
+        if len(df) == 0:
+            print("Warning: No valid data files found.")
+            return []
+        
         print('total file:', len(df))
+        
         if shuffle:
             random.shuffle(df)
         return df
@@ -99,25 +109,14 @@ class SlakhDataset(Dataset):
             self.spectrogram_config.frames_per_second
         return frames, times
 
-    def _parse_midi(self, path, metadata):
-      note_seqs = []  # ノートシーケンスを保存するリスト
-      inst_names = []  # 楽器の名前を保存するリスト
+    def _parse_midi(self, path, instrument_dict: Dict[str, str]):
+        note_seqs = []
 
-      for stem, info in metadata['stems'].items():  # メタデータの各エントリをループ処理
-          if info['midi_saved']:  # MIDIファイルが保存されているかをチェック
-              midi_path = f'{path}/{stem}.mid'  # MIDIファイルのパスを作成
-              try:
-                  # MIDIファイルをノートシーケンスに変換してリストに追加
-                  note_seqs.append(note_seq.midi_file_to_note_sequence(midi_path))
-                  # 楽器の名前をリストに追加
-                  inst_names.append(info['inst_class'])
-              except FileNotFoundError:
-                  # ファイルが見つからない場合の警告メッセージ
-                  print(f"Warning: MIDI file not found at {midi_path}")
-      
-      # ノートシーケンスと楽器名のリストを返す
-      return note_seqs, inst_names
-
+        for filename in instrument_dict.keys():
+            # this can be pretty_midi.PrettyMIDI() obj / string path to midi
+            midi_path = f'{path}/{filename}.mid'
+            note_seqs.append(note_seq.midi_file_to_note_sequence(midi_path))
+        return note_seqs, instrument_dict.values()
 
     def _tokenize(self, tracks: List[note_seq.NoteSequence], samples: np.ndarray, inst_names: List[str], example_id: Optional[str] = None):
 
@@ -395,57 +394,41 @@ class SlakhDataset(Dataset):
         
         return ns, audio, inst_names
     
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
-        # メタデータを取得
-        metadata = self.df[idx]['metadata']
-    
-        # MIDIデータを解析し、楽器名リストを取得
-        ns, inst_names = self._parse_midi(self.df[idx]['midi_path'], metadata)
-    
-        # オーディオファイルを読み込む
-        audio, sr = librosa.load(self.df[idx]['audio_path'], sr=None)
-    
-        # 必要に応じてサンプリングレートを変換
-        if sr != self.spectrogram_config.sample_rate:
-            audio = librosa.resample(audio, orig_sr=sr, target_sr=self.spectrogram_config.sample_rate)
-    
-        # MIDIとオーディオデータをトークン化
+    def __getitem__(self, idx):
+        ns, audio, inst_names = self._preprocess_inputs(self.df[idx])
+        
         row = self._tokenize(ns, audio, inst_names)
 
-        # フレームを分割
+        # NOTE: if we need to ensure that the chunks in `rows` to be contiguous, 
+        # use `length = self.mel_length` in `_split_frame`:
         rows = self._split_frame(row, length=self.split_frame_length)
-    
-        inputs, targets = [], []
-    
-        # 必要なフレーム数を選択
+        
+        inputs, targets, frame_times, num_insts = [], [], [], []
         if len(rows) > self.num_rows_per_batch:
             if self.is_deterministic:
                 start_idx = 0
             else:
                 start_idx = random.randint(0, len(rows) - self.num_rows_per_batch)
             rows = rows[start_idx : start_idx + self.num_rows_per_batch]
-    
-        # 各フレームを処理
-        for row in rows:
+        
+        for j, row in enumerate(rows):
             row = self._random_chunk(row)
             row = self._extract_target_sequence_with_indices(row, self.tie_token)
             row = self._run_length_encode_shifts(row)
+
             row = self._compute_spectrogram(row)
 
-            # トークンのランダム化（オプション）
+            # -- random order augmentation --
             if self.is_randomize_tokens:
                 t = self.randomize_tokens([self.get_token_name(t) for t in row["targets"]])
                 t = np.array([self.token_to_idx(k) for k in t])
                 t = self._remove_redundant_tokens(t)
                 row["targets"] = t
-        
-            # 長さを調整
+                        
             row = self._pad_length(row)
-        
             inputs.append(row["inputs"])
             targets.append(row["targets"])   
 
-        # バッチ化
         return torch.stack(inputs), torch.stack(targets)
     
     def __len__(self):

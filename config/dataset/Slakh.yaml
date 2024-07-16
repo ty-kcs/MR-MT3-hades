@@ -1,10 +1,10 @@
 train:
   _target_: dataset.dataset_2_random.SlakhDataset # choosing which data class to use
-  root_dir: "/content/MR-MT3-GoogleColab/dataset_for_colab/train"
+  root_dir: "/home/tyler/tyler_july/MR-MT3-GoogleColab/dataset_for_colab/train"
   mel_length: ${mel_length}
   event_length: ${event_length}
   midi_folder: MIDI
-  metadata_filename: inst_names.json
+  inst_filename: inst_names.json
   audio_filename: mix_16k.wav
   num_rows_per_batch: ${num_rows_per_batch}
   split_frame_length: ${split_frame_length}
@@ -13,7 +13,7 @@ train:
   use_tf_spectral_ops: ${dataset_use_tf_spectral_ops}
 val:
   _target_: dataset.dataset_2_random.SlakhDataset # choosing which data class to use
-  root_dir: "/content/MR-MT3-GoogleColab/dataset_for_colab/validation"
+  root_dir: "/home/tyler/tyler_july/MR-MT3-GoogleColab/dataset_for_colab/validation"
   mel_length: ${mel_length}
   event_length: ${event_length}
   midi_folder: MIDI
@@ -25,5 +25,5 @@ val:
   is_randomize_tokens: ${dataset_is_randomize_tokens}
   use_tf_spectral_ops: ${dataset_use_tf_spectral_ops}
 test:
-  root_dir: "/content/MR-MT3-GoogleColab/dataset_for_colab/test"
+  root_dir: "/home/tyler/tyler_july/MR-MT3-GoogleColab/dataset_for_colab/test"
 collate_fn: dataset.dataset_2_random.collate_fn

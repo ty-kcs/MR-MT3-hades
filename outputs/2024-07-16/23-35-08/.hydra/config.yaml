@@ -1,0 +1,117 @@
+num_epochs: 800
+devices:
+- 0
+- 1
+mode: train
+model_type: ${hydra:runtime.choices.model}
+dataset_type: ${hydra:runtime.choices.dataset}
+seed: 365
+path: null
+event_length: 1024
+mel_length: 256
+num_rows_per_batch: 12
+split_frame_length: 2000
+dataset_is_deterministic: false
+dataset_is_randomize_tokens: true
+dataset_use_tf_spectral_ops: false
+optim:
+  lr: 0.0002
+  warmup_steps: 64500
+  num_epochs: ${num_epochs}
+  num_steps_per_epoch: 1289
+  min_lr: 0.0001
+grad_accum: 1
+dataloader:
+  train:
+    batch_size: 1
+    num_workers: 2
+  val:
+    batch_size: 1
+    num_workers: 0
+modelcheckpoint:
+  monitor: val_loss
+  mode: min
+  save_last: true
+  save_top_k: 5
+  save_weights_only: false
+  every_n_epochs: 50
+  filename: '{epoch}-{step}-{val_loss:.4f}'
+trainer:
+  precision: 32
+  max_epochs: ${num_epochs}
+  accelerator: gpu
+  accumulate_grad_batches: ${grad_accum}
+  num_sanity_val_steps: 2
+  log_every_n_steps: 100
+  strategy: ddp_find_unused_parameters_false
+  devices: ${devices}
+  check_val_every_n_epoch: 1
+eval:
+  is_sanity_check: false
+  eval_first_n_examples: null
+  eval_after_num_epoch: 400
+  eval_per_epoch: 1
+  eval_dataset: null
+  exp_tag_name: null
+  audio_dir: null
+  midi_dir: null
+  contiguous_inference: null
+  batch_size: 8
+  use_tf_spectral_ops: false
+model:
+  _target_: tasks.mt3_net.MT3Net
+  config:
+    architectures:
+    - T5ForConditionalGeneration
+    d_ff: 1024
+    d_kv: 64
+    d_model: 512
+    decoder_start_token_id: 0
+    dropout_rate: 0.1
+    pad_token_id: 0
+    eos_token_id: 1
+    unk_token_id: 2
+    feed_forward_proj: gated-gelu
+    initializer_factor: 1.0
+    is_encoder_decoder: true
+    layer_norm_epsilon: 1.0e-06
+    model_type: t5
+    num_heads: 6
+    num_decoder_layers: 8
+    num_layers: 8
+    output_past: true
+    tie_word_embeddings: false
+    vocab_size: 1536
+    encoder_vocab_size: 1024
+    xl_context_length: 2048
+    use_cache: false
+dataset:
+  train:
+    _target_: dataset.dataset_2_random.SlakhDataset
+    root_dir: /content/MR-MT3-GoogleColab/dataset_for_colab/train
+    mel_length: ${mel_length}
+    event_length: ${event_length}
+    midi_folder: MIDI
+    metadata_filename: metadata.yaml
+    audio_filename: mix_16k.wav
+    num_rows_per_batch: ${num_rows_per_batch}
+    split_frame_length: ${split_frame_length}
+    is_deterministic: ${dataset_is_deterministic}
+    is_randomize_tokens: ${dataset_is_randomize_tokens}
+    use_tf_spectral_ops: ${dataset_use_tf_spectral_ops}
+  val:
+    _target_: dataset.dataset_2_random.SlakhDataset
+    root_dir: /content/MR-MT3-GoogleColab/dataset_for_colab/validation
+    mel_length: ${mel_length}
+    event_length: ${event_length}
+    midi_folder: MIDI
+    metadata_filename: metadata.yaml
+    audio_filename: mix_16k.wav
+    num_rows_per_batch: ${num_rows_per_batch}
+    split_frame_length: ${split_frame_length}
+    is_deterministic: ${dataset_is_deterministic}
+    is_randomize_tokens: ${dataset_is_randomize_tokens}
+    use_tf_spectral_ops: ${dataset_use_tf_spectral_ops}
+  test:
+    root_dir: /content/MR-MT3-GoogleColab/dataset_for_colab/test
+  collate_fn: dataset.dataset_2_random.collate_fn
